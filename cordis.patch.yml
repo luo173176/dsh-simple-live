@@ -1,0 +1,4 @@
+# dsh-simple-live: aggregated live streaming panel + model tools.
+- insert:
+    - id: simple-live
+      name: dsh-simple-live

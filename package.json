@@ -1,0 +1,57 @@
+{
+  "name": "dsh-simple-live",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "luo173176",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luo173176/dsh-simple-live.git"
+  },
+  "homepage": "https://github.com/luo173176/dsh-simple-live",
+  "bugs": {
+    "url": "https://github.com/luo173176/dsh-simple-live/issues"
+  },
+  "description": "Aggregated live streaming for DeepSeek Harness: bilibili / douyu / huya / douyin in one sidebar panel, plus model tools. · DSH 聚合直播插件：哔哩哔哩 / 斗鱼 / 虎牙 / 抖音，侧栏面板 + 模型工具。",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "live",
+    "stream",
+    "bilibili",
+    "douyu",
+    "huya",
+    "douyin"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib/**/*.js",
+    "vendor/hls.min.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  }
+}

@@ -1,0 +1,5 @@
+node_modules/
+scratch/
+.agent-cache/
+*.log
+.DS_Store
