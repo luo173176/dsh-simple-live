@@ -39,7 +39,7 @@ window.__ModuleLoader__.load({
         'page.empty': '这个分区暂时没有直播间',
         'page.emptyFollow': '还没有关注，点卡片右下角的 ♥ 收藏',
         'page.emptySearch': '没有搜到直播间',
-        'page.failed': '加载失败',
+        'page.ksHint': '没加载到房间，可点「重试」；快手分区偶尔会限流',        'page.failed': '加载失败',
         'page.retry': '重试',
         'page.live': '直播中',
         'page.close': '关闭',
@@ -60,7 +60,7 @@ window.__ModuleLoader__.load({
         'me.tab.settings': '播放设置',
         'me.link.placeholder': '粘贴直播间链接，或 平台:房间号',
         'me.link.open': '打开直播间',
-        'me.link.tip': '支持哔哩哔哩 / 斗鱼 / 虎牙 / 抖音 的直播间链接。',
+        'me.link.tip': '支持哔哩哔哩 / 斗鱼 / 虎牙 / 抖音 / 快手 的直播间链接。',
         'me.link.bad': '识别不出房间号，换个链接试试',
         'me.history.empty': '还没有观看记录',
         'me.history.clear': '清空记录',
@@ -72,6 +72,10 @@ window.__ModuleLoader__.load({
         'me.account.placeholder': '粘贴 cookie，例如 SESSDATA=xxxx; bili_jct=yyyy',
         'me.account.save': '保存',
         'me.account.remove': '清除',
+        'me.account.check': '校验',
+        'me.account.verified': '已登录：',
+        'me.account.invalid': 'Cookie 失效',
+        'me.account.unverified': '已保存 · 无法自动校验',
         'me.settings.danmaku': '显示弹幕',
         'me.settings.opacity': '弹幕透明度',
         'me.settings.size': '弹幕字号',
@@ -101,6 +105,7 @@ window.__ModuleLoader__.load({
         'page.empty': 'No live room in this category',
         'page.emptyFollow': 'Nothing followed yet — tap the ♥ on a card',
         'page.emptySearch': 'No live room found',
+        'page.ksHint': 'No rooms loaded — tap Retry; Kuaishou sometimes rate-limits',
         'page.failed': 'Failed to load',
         'page.retry': 'Retry',
         'page.live': 'LIVE',
@@ -122,7 +127,7 @@ window.__ModuleLoader__.load({
         'me.tab.settings': 'Settings',
         'me.link.placeholder': 'Paste a live URL, or platform:roomId',
         'me.link.open': 'Open room',
-        'me.link.tip': 'Works with bilibili / douyu / huya / douyin live links.',
+        'me.link.tip': 'Works with bilibili / douyu / huya / douyin / kuaishou live links.',
         'me.link.bad': 'Could not find a room id in that link',
         'me.history.empty': 'No watch history yet',
         'me.history.clear': 'Clear',
@@ -134,6 +139,10 @@ window.__ModuleLoader__.load({
         'me.account.placeholder': 'Paste cookie, e.g. SESSDATA=xxxx; bili_jct=yyyy',
         'me.account.save': 'Save',
         'me.account.remove': 'Clear',
+        'me.account.check': 'Verify',
+        'me.account.verified': 'Signed in: ',
+        'me.account.invalid': 'Cookie invalid',
+        'me.account.unverified': 'Saved · cannot verify',
         'me.settings.danmaku': 'Show danmaku',
         'me.settings.opacity': 'Danmaku opacity',
         'me.settings.size': 'Danmaku size',
@@ -653,6 +662,7 @@ window.__ModuleLoader__.load({
       const [history, setHistory] = useState([])
       const [accounts, setAccounts] = useState([])
       const [cookies, setCookies] = useState({})
+      const [verifyMap, setVerifyMap] = useState({})
 
       useEffect(() => {
         if (section !== 'history') return
@@ -669,7 +679,19 @@ window.__ModuleLoader__.load({
         if (section !== 'account') return
         let alive = true
         apiGet('/accounts')
-          .then((d) => alive && setAccounts(d.items || []))
+          .then((d) => {
+            if (!alive) return
+            const items = d.items || []
+            setAccounts(items)
+            // 对已保存的账号真实校验一次登录状态
+            items
+              .filter((a) => a.saved)
+              .forEach((a) => {
+                apiPost('/accounts', { op: 'verify', platform: a.platform })
+                  .then((r) => alive && r && r.verify && setVerifyMap((prev) => ({ ...prev, [a.platform]: r.verify })))
+                  .catch(() => {})
+              })
+          })
           .catch(() => {})
         return () => {
           alive = false
@@ -714,11 +736,20 @@ window.__ModuleLoader__.load({
         try {
           const d = await apiPost('/accounts', { platform: p, cookie: cookies[p] || '' })
           setAccounts(d.items || [])
+          if (d.verify) setVerifyMap((prev) => ({ ...prev, [p]: d.verify }))
           setCookies((prev) => ({ ...prev, [p]: '' }))
         } catch {
           /* ignore */
         } finally {
           setBusy(false)
+        }
+      }
+      const verifyOne = async (p) => {
+        try {
+          const d = await apiPost('/accounts', { op: 'verify', platform: p })
+          if (d && d.verify) setVerifyMap((prev) => ({ ...prev, [p]: d.verify }))
+        } catch {
+          /* ignore */
         }
       }
       const removeCookie = async (p) => {
@@ -841,6 +872,17 @@ window.__ModuleLoader__.load({
                   h('div', { className: 'sl-me-tip' }, t('me.account.tip')),
                   sites.map((s) => {
                     const acc = accountOf(s.id)
+                    const v = verifyMap[s.id]
+                    let badge
+                    if (acc && acc.saved) {
+                      if (v && v.ok === true) badge = t('me.account.verified') + (v.name || '')
+                      else if (v && v.ok === false) badge = t('me.account.invalid')
+                      else if (v) badge = t('me.account.unverified')
+                      else badge = t('me.account.saved') + '（' + (acc.preview || '') + '）'
+                    } else {
+                      badge = t('me.account.none')
+                    }
+                    const badgeState = v && v.ok === true ? ' is-on' : v && v.ok === false ? ' is-bad' : acc && acc.saved ? ' is-on' : ''
                     return h(
                       'div',
                       { key: s.id, className: 'sl-me-acc' },
@@ -848,12 +890,19 @@ window.__ModuleLoader__.load({
                         'div',
                         { className: 'sl-me-acc-head' },
                         h('span', { className: 'sl-me-acc-name' }, s.name),
-                        h(
-                          'span',
-                          { className: 'sl-me-acc-badge' + (acc && acc.saved ? ' is-on' : '') },
-                          acc && acc.saved ? t('me.account.saved') + '（' + (acc.preview || '') + '）' : t('me.account.none'),
-                        ),
+                        h('span', { className: 'sl-me-acc-badge' + badgeState }, badge),
                       ),
+                      acc && acc.saved && v && v.ok === true
+                        ? h(
+                            'div',
+                            { className: 'sl-me-acc-who' },
+                            v.avatar ? h('img', { className: 'sl-me-acc-avatar', src: v.avatar, alt: '' }) : null,
+                            h('span', null, (v.name || '') + (v.uid ? ' · UID ' + v.uid : '')),
+                          )
+                        : null,
+                      acc && acc.saved && v && v.ok === false
+                        ? h('div', { className: 'sl-me-acc-err' }, v.message || t('me.account.invalid'))
+                        : null,
                       h(
                         'div',
                         { className: 'sl-me-row' },
@@ -869,6 +918,9 @@ window.__ModuleLoader__.load({
                           { className: 'sl-btn-primary', onClick: () => saveCookie(s.id), disabled: busy },
                           t('me.account.save'),
                         ),
+                        acc && acc.saved
+                          ? h('button', { className: 'sl-btn', onClick: () => verifyOne(s.id) }, t('me.account.check'))
+                          : null,
                         acc && acc.saved
                           ? h('button', { className: 'sl-me-clear', onClick: () => removeCookie(s.id) }, t('me.account.remove'))
                           : null,
@@ -1439,6 +1491,16 @@ window.__ModuleLoader__.load({
                               ? t('page.emptySearch')
                               : t('page.empty'),
                       ),
+                      !loading && mode === 'area' && platform === 'kuaishou'
+                        ? h('div', { className: 'sl-state-msg' }, t('page.ksHint'))
+                        : null,
+                      !loading && mode === 'area'
+                        ? h(
+                            'button',
+                            { className: 'sl-btn', onClick: () => setNonce((n) => n + 1) },
+                            t('page.retry'),
+                          )
+                        : null,
                     ),
                 moreFlag
                   ? h(
@@ -1633,6 +1695,10 @@ window.__ModuleLoader__.load({
       '.sl-me-acc-name{font-weight:600;font-size:12px}',
       '.sl-me-acc-badge{font-size:11px;color:var(--dsw-alias-label-secondary,#a1a1aa);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.sl-me-acc-badge.is-on{color:var(--dsw-alias-state-success-primary,#22c55e)}',
+      '.sl-me-acc-badge.is-bad{color:var(--dsw-alias-state-error-primary,#ef4444)}',
+      '.sl-me-acc-who{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dsw-alias-label-secondary,#a1a1aa)}',
+      '.sl-me-acc-avatar{width:18px;height:18px;border-radius:50%;object-fit:cover;flex:none}',
+      '.sl-me-acc-err{font-size:11px;color:var(--dsw-alias-state-error-primary,#ef4444)}',
       '.sl-me-setting{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}',
       '.sl-me-setting input[type=range]{flex:1;max-width:220px}',
       '.sl-side{display:inline-flex;align-items:center;justify-content:center;color:inherit}',

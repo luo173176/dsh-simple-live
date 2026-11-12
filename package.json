@@ -13,7 +13,7 @@
   "bugs": {
     "url": "https://github.com/luo173176/dsh-simple-live/issues"
   },
-  "description": "Aggregated live streaming for DeepSeek Harness: bilibili / douyu / huya / douyin in one sidebar panel, plus model tools. · DSH 聚合直播插件：哔哩哔哩 / 斗鱼 / 虎牙 / 抖音，侧栏面板 + 模型工具。",
+  "description": "Aggregated live streaming for DeepSeek Harness: bilibili / douyu / huya / douyin / kuaishou in one sidebar panel, with danmaku and model tools. · DSH 聚合直播插件：哔哩哔哩 / 斗鱼 / 虎牙 / 抖音 / 快手，侧栏面板 + 弹幕 + 模型工具。",
   "keywords": [
     "dsh",
     "deepseek-harness",
@@ -24,7 +24,8 @@
     "bilibili",
     "douyu",
     "huya",
-    "douyin"
+    "douyin",
+    "kuaishou"
   ],
   "exports": {
     ".": "./index.js",
