@@ -18,7 +18,7 @@ Aggregated live-streaming panel for DeepSeek Harness — browse and play bilibil
   - 观看记录：本地保存最近观看（去重、上限 200）。
   - 账号登录：按平台保存 cookie（仅存本机）；保存后自动校验，显示昵称 / 头像 / UID 或「Cookie 失效」，提升清晰度与搜索成功率。
   - 播放设置：弹幕开关 / 透明度 / 字号 / 速度、自动播放、默认清晰度。
-- **关注**：收藏主播，关注页实时刷新在播状态。
+- **关注**：收藏主播，关注页实时刷新在播状态；播放中也能在播放器头部直接关注 / 取消关注，状态与列表实时同步。
 - **模型工具**：`live_categories` / `live_trending` / `live_search` / `live_play`，让模型直接查分区、找房间、把房间排进面板播放。
 
 ![播放器 · 多清晰度与实时弹幕](assets/screenshot-2.png)

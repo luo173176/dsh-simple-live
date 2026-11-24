@@ -37,13 +37,14 @@ window.__ModuleLoader__.load({
         'page.loading': '加载中…',
         'page.loadMore': '加载更多',
         'page.empty': '这个分区暂时没有直播间',
-        'page.emptyFollow': '还没有关注，点卡片右下角的 ♥ 收藏',
+        'page.emptyFollow': '还没有关注，点卡片或播放器里的 ♥ 收藏',
         'page.emptySearch': '没有搜到直播间',
         'page.ksHint': '没加载到房间，可点「重试」；快手分区偶尔会限流',        'page.failed': '加载失败',
         'page.retry': '重试',
         'page.live': '直播中',
         'page.close': '关闭',
         'page.follow': '关注',
+        'page.following': '已关注',
         'page.unfollow': '取消关注',
         'page.all': '全部',
         'page.noQuality': '这个房间暂时没有可用的清晰度',
@@ -103,7 +104,7 @@ window.__ModuleLoader__.load({
         'page.loading': 'Loading…',
         'page.loadMore': 'Load more',
         'page.empty': 'No live room in this category',
-        'page.emptyFollow': 'Nothing followed yet — tap the ♥ on a card',
+        'page.emptyFollow': 'Nothing followed yet — tap the ♥ on a card or in the player',
         'page.emptySearch': 'No live room found',
         'page.ksHint': 'No rooms loaded — tap Retry; Kuaishou sometimes rate-limits',
         'page.failed': 'Failed to load',
@@ -111,6 +112,7 @@ window.__ModuleLoader__.load({
         'page.live': 'LIVE',
         'page.close': 'Close',
         'page.follow': 'Follow',
+        'page.following': 'Following',
         'page.unfollow': 'Unfollow',
         'page.all': 'All',
         'page.noQuality': 'No playable quality right now',
@@ -365,7 +367,7 @@ window.__ModuleLoader__.load({
 
     /* -------------------------------------------------------------- player -- */
 
-    function Player({ detail, settings, onClose, onPatchSettings }) {
+    function Player({ detail, settings, followed, onToggleFollow, onClose, onPatchSettings }) {
       const videoRef = useRef(null)
       const chatRef = useRef(null)
       const bulletSeq = useRef(0)
@@ -562,6 +564,20 @@ window.__ModuleLoader__.load({
               ),
             ),
           ),
+          onToggleFollow
+            ? h(
+                'button',
+                {
+                  className: 'sl-pfav' + (followed ? ' is-on' : ''),
+                  onClick: onToggleFollow,
+                  title: t(followed ? 'page.unfollow' : 'page.follow'),
+                  'aria-label': t(followed ? 'page.unfollow' : 'page.follow'),
+                  'aria-pressed': !!followed,
+                },
+                heart(14, followed),
+                h('span', { className: 'sl-pfav-txt' }, t(followed ? 'page.following' : 'page.follow')),
+              )
+            : null,
           h(
             'button',
             {
@@ -1516,6 +1532,17 @@ window.__ModuleLoader__.load({
           ? h(Player, {
               detail: playing.detail,
               settings,
+              // 播放中也能关注：用 playing 里的平台兜底，避免个别站点详情缺 platform
+              followed: followedKeys.has(
+                String(playing.detail.platform || playing.platform) + ':' + String(playing.detail.roomId),
+              ),
+              onToggleFollow: () =>
+                toggleFollow({
+                  ...playing.detail,
+                  platform: playing.detail.platform || playing.platform,
+                  // 详情里的 qualities 是带签名的代理地址，没必要写进 follows.json
+                  qualities: undefined,
+                }),
               onClose: () => setPlaying(null),
               onPatchSettings: patchSettings,
             })
@@ -1647,6 +1674,11 @@ window.__ModuleLoader__.load({
       '.sl-q{height:22px;padding:0 8px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.18));border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary,#a1a1aa);font-size:11px;cursor:pointer;white-space:nowrap}',
       '.sl-q:hover{color:var(--dsw-alias-label-primary,#f4f4f5)}',
       '.sl-q.is-on{background:var(--dsw-alias-interactive-bg-active,rgba(128,128,128,.18));border-color:var(--dsw-alias-border-l2,rgba(128,128,128,.34));color:var(--dsw-alias-label-primary,#f4f4f5);font-weight:600}',
+      '.sl-pfav{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:30px;padding:0 9px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.18));border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#a1a1aa);cursor:pointer;flex:none;white-space:nowrap}',
+      '.sl-pfav:hover{color:var(--dsw-alias-state-error-primary,#e83854);border-color:var(--dsw-alias-state-error-primary,#e83854)}',
+      '.sl-pfav.is-on{color:var(--dsw-alias-state-error-primary,#e83854);border-color:rgba(232,56,84,.55);background:rgba(232,56,84,.12)}',
+      '.sl-pfav-txt{font-size:12px}',
+      '@media (max-width:600px){.sl-pfav-txt{display:none}.sl-pfav{width:30px;padding:0}}',
       '.sl-pbody{display:flex;flex:1;min-height:0}',
       '.sl-pstage{position:relative;display:flex;flex:1;min-width:0;min-height:0;align-items:center;justify-content:center;background:#000;overflow:hidden}',
       '.sl-pstage video{width:100%;height:100%;object-fit:contain;background:#000}',
